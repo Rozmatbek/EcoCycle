@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="ecoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="100" height="100" rx="28" fill="url(#ecoGrad)"/>
+  <path d="M50 20 L62 38 L54 38 C54 46 60 52 68 52 L68 58 C57 58 48 50 48 38 L40 38 Z" fill="#FFFFFF"/>
+  <path d="M72 52 L84 70 L76 70 C72 78 64 82 54 82 L54 76 C61 76 67 73 70 66 L62 66 Z" fill="#FFFFFF" opacity="0.95"/>
+  <path d="M28 52 L36 34 L42 38 C38 46 40 54 46 60 L42 64 C34 57 32 47 36 38 L28 42 Z" fill="#FFFFFF" opacity="0.95"/>
+</svg>
