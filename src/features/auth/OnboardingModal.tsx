@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { User, UserRole } from '../../types';
 import { Recycle, ArrowRight, CheckCircle2, Phone, Sparkles, User as UserIcon, Truck, Factory } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { formatUzbekPhone, getPhoneDigitsCount } from '../../utils/phoneFormatter';
 
 interface Props {
   isOpen: boolean;
@@ -17,26 +18,27 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
   
   // Registration Form State
   const [selectedRole, setSelectedRole] = useState<UserRole>('user');
-  const [firstName, setFirstName] = useState('Ali');
-  const [lastName, setLastName] = useState('Karimov');
-  const [phone, setPhone] = useState('+998 90 123-45-67');
-  const [selectedRegionId, setSelectedRegionId] = useState('xorazm');
-  const [selectedDistrict, setSelectedDistrict] = useState('Urganch shahri');
-  const [mahalla, setMahalla] = useState('Al-Xorazmiy mahallasi');
-  const [street, setStreet] = useState('Istiqlol ko‘chasi, 28-uy');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('+998 ');
+  const [selectedRegionId, setSelectedRegionId] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [mahalla, setMahalla] = useState('');
+  const [street, setStreet] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
-  const currentRegion = UZBEKISTAN_REGIONS.find(r => r.id === selectedRegionId) || UZBEKISTAN_REGIONS[0];
+  const currentRegion = UZBEKISTAN_REGIONS.find(r => r.id === selectedRegionId);
 
   const handleRegionChange = (regId: string) => {
     setSelectedRegionId(regId);
-    const reg = UZBEKISTAN_REGIONS.find(r => r.id === regId);
-    if (reg && reg.districts.length > 0) {
-      setSelectedDistrict(reg.districts[0]);
-    }
+    setSelectedDistrict('');
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatUzbekPhone(e.target.value));
   };
 
   const handleStartRegistration = () => {
@@ -45,8 +47,12 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
 
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!firstName.trim() || !lastName.trim() || !phone.trim() || !selectedDistrict) {
+    if (!firstName.trim() || !lastName.trim() || !selectedRegionId || !selectedDistrict) {
       setErrorMsg('Iltimos, barcha majburiy maydonlarni to‘ldiring.');
+      return;
+    }
+    if (getPhoneDigitsCount(phone) < 9) {
+      setErrorMsg('Iltimos, telefon raqamni to‘liq kiriting (+998 dan keyin 9 ta raqam).');
       return;
     }
     setErrorMsg('');
@@ -74,7 +80,7 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       lastName,
       phone,
       country: 'O‘zbekiston',
-      region: currentRegion.name,
+      region: currentRegion?.name || 'O‘zbekiston',
       district: selectedDistrict,
       mahalla,
       street,
@@ -217,16 +223,13 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
         {slide === 3 && (
           <div>
             <div style={{ marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
                 Ro‘yxatdan o‘tish
               </h2>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                EcoCycle O‘zbekiston xizmatidan foydalanish uchun ma’lumotlaringizni kiriting
-              </p>
             </div>
 
             <div style={{ marginBottom: '14px' }}>
-              <UzbekistanLockBadge subtitle="EcoCycle hozircha faqat O‘zbekistonda ishlaydi." />
+              <UzbekistanLockBadge hideTitle subtitle="EcoCycle hozircha faqat O‘zbekistonda ishlaydi." />
             </div>
 
             {errorMsg && (
@@ -339,7 +342,12 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                   className="form-input" 
                   placeholder="+998 90 123-45-67" 
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={handlePhoneChange}
+                  onFocus={() => {
+                    if (!phone || phone.trim() === '+998') {
+                      setPhone('+998 ');
+                    }
+                  }}
                   required
                 />
               </div>
@@ -351,7 +359,9 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     className="form-select"
                     value={selectedRegionId}
                     onChange={(e) => handleRegionChange(e.target.value)}
+                    required
                   >
+                    <option value="" disabled>Viloyatni tanlang</option>
                     {UZBEKISTAN_REGIONS.map(reg => (
                       <option key={reg.id} value={reg.id}>{reg.name}</option>
                     ))}
@@ -364,8 +374,11 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                     className="form-select"
                     value={selectedDistrict}
                     onChange={(e) => setSelectedDistrict(e.target.value)}
+                    required
+                    disabled={!selectedRegionId}
                   >
-                    {currentRegion.districts.map(dist => (
+                    <option value="" disabled>{selectedRegionId ? "Tumanni tanlang" : "Avval viloyatni tanlang"}</option>
+                    {currentRegion?.districts.map(dist => (
                       <option key={dist} value={dist}>{dist}</option>
                     ))}
                   </select>
@@ -377,14 +390,14 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 <input 
                   type="text" 
                   className="form-input" 
-                  placeholder="Masalan: Istiqlol ko‘chasi, 28-uy" 
+                  placeholder="Istiqlol ko‘chasi, 28-uy" 
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
                 />
               </div>
 
               <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '8px' }}>
-                Davom etish (SMS tasdiqlash) <ArrowRight size={18} />
+                Davom etish <ArrowRight size={18} />
               </button>
             </form>
           </div>

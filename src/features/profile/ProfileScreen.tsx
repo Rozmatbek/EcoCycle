@@ -20,6 +20,7 @@ import {
   X 
 } from 'lucide-react';
 import { downloadEcoCycleGuidePdf } from '../../utils/generateGuidePdf';
+import { formatUzbekPhone } from '../../utils/phoneFormatter';
 
 interface Props {
   onOpenOnboarding: () => void;
@@ -390,7 +391,7 @@ export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
                   type="tel"
                   className="form-input"
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
+                  onChange={(e) => setEditPhone(formatUzbekPhone(e.target.value))}
                   required
                 />
               </div>
