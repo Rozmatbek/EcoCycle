@@ -15,6 +15,7 @@ import {
 import { DEMO_USER, INITIAL_ORDERS, INITIAL_TRANSACTIONS, INITIAL_ECOPOINT_TRANSACTIONS, INITIAL_REWARDS, INITIAL_NOTIFICATIONS, INITIAL_RECYCLER_STOCK } from '../data/mockData';
 import { INITIAL_WASTE_CATEGORIES } from '../data/wasteCategories';
 import { INITIAL_RECYCLING_POINTS } from '../data/recyclingPoints';
+import { saveUserToSupabase, trackVisitor } from '../services/supabase';
 
 interface AppContextType {
   user: User | null;
@@ -33,6 +34,8 @@ interface AppContextType {
   darkMode: boolean;
   devicePreview: 'responsive' | 'mobile' | 'tablet';
   unreadNotifsCount: number;
+  notificationsEnabled: boolean;
+  setNotificationsEnabled: (enabled: boolean) => void;
   
   // Actions
   login: (user: User) => void;
@@ -76,7 +79,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const [wasteCategories, setWasteCategories] = useState<WasteCategory[]>(() => {
     const saved = localStorage.getItem('ecocycle_categories');
-    return saved ? JSON.parse(saved) : INITIAL_WASTE_CATEGORIES;
+    if (saved) {
+      try {
+        const parsed: WasteCategory[] = JSON.parse(saved);
+        const cleaned = parsed.filter(c => c.id !== 'battery');
+        return cleaned.length > 0 ? cleaned : INITIAL_WASTE_CATEGORIES;
+      } catch {
+        return INITIAL_WASTE_CATEGORIES;
+      }
+    }
+    return INITIAL_WASTE_CATEGORIES;
   });
 
   const [recyclingPoints, setRecyclingPoints] = useState<RecyclingPoint[]>(() => {
@@ -114,6 +126,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
   });
 
+  const [notificationsEnabled, setNotificationsEnabledState] = useState<boolean>(() => {
+    const saved = localStorage.getItem('ecocycle_notifications_enabled');
+    if (saved !== null) {
+      return saved === 'true';
+    }
+    const savedUser = localStorage.getItem('ecocycle_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (typeof u.notificationsEnabled === 'boolean') {
+          return u.notificationsEnabled;
+        }
+      } catch {}
+    }
+    return false; // Default: user determines whether to enable notifications
+  });
+
+  const setNotificationsEnabled = (enabled: boolean) => {
+    setNotificationsEnabledState(enabled);
+    localStorage.setItem('ecocycle_notifications_enabled', String(enabled));
+    setUser(prev => prev ? { ...prev, notificationsEnabled: enabled } : prev);
+  };
+
   const [recyclerStock, setRecyclerStock] = useState<RecyclerMaterialStock[]>(() => {
     const saved = localStorage.getItem('ecocycle_recycler_stock');
     return saved ? JSON.parse(saved) : INITIAL_RECYCLER_STOCK;
@@ -131,10 +166,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     localStorage.setItem('ecocycle_auth', String(isAuthenticated));
     localStorage.setItem('ecocycle_role', activeRole);
     localStorage.setItem('ecocycle_orders', JSON.stringify(orders));
+    localStorage.setItem('ecocycle_categories', JSON.stringify(wasteCategories.filter(c => c.id !== 'battery')));
     localStorage.setItem('ecocycle_balance', String(balance));
     localStorage.setItem('ecocycle_points_total', String(ecoPoints));
     localStorage.setItem('ecocycle_transactions', JSON.stringify(transactions));
     localStorage.setItem('ecocycle_notifications', JSON.stringify(notifications));
+    localStorage.setItem('ecocycle_notifications_enabled', String(notificationsEnabled));
     localStorage.setItem('ecocycle_dark_mode', String(darkMode));
     localStorage.setItem('ecocycle_recycler_stock', JSON.stringify(recyclerStock));
 
@@ -143,9 +180,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [user, isAuthenticated, activeRole, orders, balance, ecoPoints, transactions, notifications, darkMode, recyclerStock]);
+  }, [user, isAuthenticated, activeRole, orders, wasteCategories, balance, ecoPoints, transactions, notifications, notificationsEnabled, darkMode, recyclerStock]);
 
-  const unreadNotifsCount = notifications.filter(n => !n.isRead).length;
+  const unreadNotifsCount = notificationsEnabled ? notifications.filter(n => !n.isRead).length : 0;
 
   const login = (newUser: User) => {
     const lockedUser: User = {
@@ -154,6 +191,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     setUser(lockedUser);
     setIsAuthenticated(true);
+    saveUserToSupabase({
+      id: lockedUser.id,
+      first_name: lockedUser.firstName,
+      last_name: lockedUser.lastName,
+      phone: lockedUser.phone,
+      region: lockedUser.region,
+      district: lockedUser.district,
+      mahalla: lockedUser.mahalla,
+      street: lockedUser.street,
+      role: lockedUser.role,
+      created_at: lockedUser.createdAt
+    });
+    trackVisitor(lockedUser);
   };
 
   const logout = () => {
@@ -168,6 +218,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       country: 'O‘zbekiston' // Guarantee country cannot change
     };
     setUser(safeUpdate);
+    saveUserToSupabase({
+      id: safeUpdate.id,
+      first_name: safeUpdate.firstName,
+      last_name: safeUpdate.lastName,
+      phone: safeUpdate.phone,
+      region: safeUpdate.region,
+      district: safeUpdate.district,
+      mahalla: safeUpdate.mahalla,
+      street: safeUpdate.street,
+      role: safeUpdate.role,
+      created_at: safeUpdate.createdAt
+    });
+    trackVisitor(safeUpdate);
   };
 
   const createOrder = (orderData: Omit<WasteOrder, 'id' | 'createdAt' | 'updatedAt' | 'statusHistory'>): WasteOrder => {
@@ -429,6 +492,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       darkMode,
       devicePreview,
       unreadNotifsCount,
+      notificationsEnabled,
+      setNotificationsEnabled,
       login,
       logout,
       updateProfile,

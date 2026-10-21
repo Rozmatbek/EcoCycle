@@ -81,11 +81,9 @@ BT
 0 -14 Td
 (5. Shisha (Butilkalar, bankalar): 600 so'm / kg (+4 EcoPoints)) Tj
 0 -14 Td
-(6. Batareya (Maxsus utilizatsiya): 15 000 so'm / kg (+30 EcoPoints)) Tj
+(6. Elektron chiqindi (Telefon, platalar): 8 500 so'm / kg (+25 EcoPoints)) Tj
 0 -14 Td
-(7. Elektron chiqindi (Telefon, platalar): 8 500 so'm / kg (+25 EcoPoints)) Tj
-0 -14 Td
-(8. Tekstil (Kiyim-kechak, matolar): 1 200 so'm / kg (+5 EcoPoints)) Tj
+(7. Tekstil (Kiyim-kechak, matolar): 1 200 so'm / kg (+5 EcoPoints)) Tj
 /F1 14 Tf
 0 -26 Td
 (3. TOPSHIRISH VA PICKUP BUYURTMA BERISH TARTIBI) Tj

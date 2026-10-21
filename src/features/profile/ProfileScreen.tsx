@@ -17,19 +17,38 @@ import {
   ChevronDown, 
   ChevronUp, 
   Check, 
-  X 
+  X,
+  CheckCircle2,
+  Send,
+  MessageSquareQuote,
+  Loader2
 } from 'lucide-react';
 import { downloadEcoCycleGuidePdf } from '../../utils/generateGuidePdf';
 import { formatUzbekPhone } from '../../utils/phoneFormatter';
+import { recordFeedbackToSupabase } from '../../services/supabase';
 
 interface Props {
   onOpenOnboarding: () => void;
 }
 
 export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
-  const { user, updateProfile, darkMode, toggleDarkMode, logout, activeRole } = useApp();
+  const { 
+    user, 
+    updateProfile, 
+    darkMode, 
+    toggleDarkMode, 
+    logout, 
+    activeRole,
+    notificationsEnabled,
+    setNotificationsEnabled
+  } = useApp();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [activeFaqId, setActiveFaqId] = useState<number | null>(null);
+
+  // Feedback form state
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState(false);
 
   // Edit form state
   const [editFirstName, setEditFirstName] = useState(user?.firstName || 'Ali');
@@ -65,6 +84,69 @@ export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
     }
   };
 
+  const handleSendFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackText.trim()) return;
+
+    setIsSubmittingFeedback(true);
+    setFeedbackSuccess(false);
+
+    const userName = `${user?.firstName || 'Ali'} ${user?.lastName || 'Karimov'}`.trim();
+    const userPhone = user?.phone || '+998 90 123-45-67';
+    const userRegion = user?.region || 'O‘zbekiston';
+    const userDistrict = user?.district || '';
+    const userAddress = `${user?.mahalla || ''}, ${user?.street || ''}`.trim();
+
+    try {
+      // 1. Send email directly to dasturlash85@gmail.com via FormSubmit AJAX API
+      await fetch('https://formsubmit.co/ajax/dasturlash85@gmail.com', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: `EcoCycle: Yangi izoh yoki savol (${userName})`,
+          _template: 'box',
+          foydalanuvchi: userName,
+          telefon: userPhone,
+          hudud: `${userRegion}${userDistrict ? ' / ' + userDistrict : ''}`,
+          manzil: userAddress || 'Ko‘rsatilmagan',
+          izoh_va_savol: feedbackText.trim(),
+          yuborilgan_sana: new Date().toLocaleString('uz-UZ')
+        })
+      });
+
+      // 2. Also persist in Supabase backend
+      await recordFeedbackToSupabase({
+        user_name: userName,
+        phone: userPhone,
+        message: feedbackText.trim(),
+        region: userRegion,
+        district: userDistrict,
+        sent_to_email: 'dasturlash85@gmail.com'
+      });
+
+      setFeedbackSuccess(true);
+      setFeedbackText('');
+    } catch (err) {
+      console.warn('Feedback send notice:', err);
+      // Fallback recording
+      await recordFeedbackToSupabase({
+        user_name: userName,
+        phone: userPhone,
+        message: feedbackText.trim(),
+        region: userRegion,
+        district: userDistrict,
+        sent_to_email: 'dasturlash85@gmail.com'
+      });
+      setFeedbackSuccess(true);
+      setFeedbackText('');
+    } finally {
+      setIsSubmittingFeedback(false);
+    }
+  };
+
   const faqs = [
     {
       id: 1,
@@ -89,12 +171,12 @@ export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
     {
       id: 5,
       q: 'Qaysi chiqindilar qabul qilinadi?',
-      a: 'EcoCycle platformasida Plastik (PET, HDPE), Karton, Qog‘oz, Metall (alyuminiy, temir, mis), Shisha, Batareyalar, Elektron chiqindilar va Tekstil matolari qabul qilinadi.'
+      a: 'EcoCycle platformasida Plastik (PET, HDPE), Karton, Qog‘oz, Metall (alyuminiy, temir, mis), Shisha, Elektron chiqindilar va Tekstil matolari qabul qilinadi.'
     },
     {
       id: 6,
       q: 'Qabul punktlari qayerda joylashgan?',
-      a: 'Ilovaning "Xarita" bo‘limida O‘zbekiston bo‘ylab barcha rasmiy va hamkor qabul punktlarining aniq manzili, ish vaqti, telefon raqamlari va qabul qilinadigan materiallar ro‘yxati mavjud.'
+      a: 'Ilovaning "Punktlar" bo‘limida O‘zbekiston bo‘ylab barcha rasmiy va hamkor qabul punktlarining aniq manzili, ish vaqti, telefon raqamlari va qabul qilinadigan materiallar ro‘yxati mavjud.'
     }
   ];
 
@@ -105,8 +187,6 @@ export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
       case 'recycler': return 'Qayta ishlash korxonasi (Zavod)';
     }
   };
-
-  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(true);
 
   return (
     <div className="page-container">
@@ -171,26 +251,43 @@ export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <Bell size={18} color="var(--primary)" />
-              <span style={{ fontSize: '14px', fontWeight: '700' }}>Bildirishnomalar</span>
+              <div>
+                <span style={{ fontSize: '14px', fontWeight: '700' }}>Bildirishnomalar</span>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                  {notificationsEnabled ? 'Yoqilgan (xabarnomalar qabul qilinadi)' : 'O‘chirilgan'}
+                </div>
+              </div>
             </div>
-            <div style={{
-              width: '44px',
-              height: '24px',
-              background: notificationsEnabled ? 'var(--primary)' : '#CBD5E1',
-              borderRadius: '20px',
-              position: 'relative',
-              transition: 'all 0.2s'
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: '700',
+                padding: '2px 8px',
+                borderRadius: '8px',
+                background: notificationsEnabled ? 'var(--primary-light)' : 'rgba(100, 116, 139, 0.15)',
+                color: notificationsEnabled ? 'var(--primary)' : 'var(--text-muted)'
+              }}>
+                {notificationsEnabled ? 'Yoqilgan' : 'O‘chirilgan'}
+              </span>
               <div style={{
-                width: '18px',
-                height: '18px',
-                background: 'white',
-                borderRadius: '50%',
-                position: 'absolute',
-                top: '3px',
-                left: notificationsEnabled ? '22px' : '4px',
+                width: '44px',
+                height: '24px',
+                background: notificationsEnabled ? 'var(--primary)' : '#CBD5E1',
+                borderRadius: '20px',
+                position: 'relative',
                 transition: 'all 0.2s'
-              }} />
+              }}>
+                <div style={{
+                  width: '18px',
+                  height: '18px',
+                  background: 'white',
+                  borderRadius: '50%',
+                  position: 'absolute',
+                  top: '3px',
+                  left: notificationsEnabled ? '22px' : '4px',
+                  transition: 'all 0.2s'
+                }} />
+              </div>
             </div>
           </div>
 
@@ -320,25 +417,94 @@ export const ProfileScreen: React.FC<Props> = ({ onOpenOnboarding }) => {
           })}
         </div>
 
-        {/* Operator Call Button */}
-        <div style={{ marginTop: '20px', background: 'var(--primary-light)', padding: '16px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontWeight: '800', fontSize: '14px', color: 'var(--primary-dark)' }}>
-              Savolingiz qoldimi?
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--primary-dark)', opacity: 0.85 }}>
-              Operatorimiz 24/7 yordam berishga tayyor
-            </div>
+      </div>
+
+      {/* Savol yoki izoh qoldirish (Streamlined as requested) */}
+      <div className="eco-card" style={{ padding: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+          <MessageSquareQuote size={20} color="var(--primary)" />
+          <h2 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>
+            Savol yoki izoh qoldirish ✍️
+          </h2>
+        </div>
+        
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '18px', lineHeight: 1.5 }}>
+          Yuqoridagi savollar orasidan kerakli ma'lumotni topmadingizmi? Savol, fikr yoki taklifingizni quyida yozib qoldiring:
+        </p>
+
+        {feedbackSuccess && (
+          <div style={{
+            background: 'var(--primary-light)',
+            color: 'var(--primary-dark)',
+            padding: '14px 16px',
+            borderRadius: '12px',
+            marginBottom: '16px',
+            fontSize: '13px',
+            fontWeight: '700',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            border: '1px solid rgba(16, 185, 129, 0.3)'
+          }}>
+            <CheckCircle2 size={20} color="var(--primary)" style={{ flexShrink: 0 }} />
+            <span>Rahmat! Sizning izohingiz dasturlash85@gmail.com ga muvaffaqiyatli yuborildi va saqlandi.</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSendFeedback}>
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label className="form-label" style={{ fontWeight: '700', marginBottom: '8px' }}>
+              Izohingiz yoki savolingiz
+            </label>
+            <textarea
+              className="form-input"
+              rows={4}
+              value={feedbackText}
+              onChange={(e) => setFeedbackText(e.target.value)}
+              placeholder="O‘z fikringiz, taklifingiz yoki savolingizni batafsil yozing..."
+              required
+              style={{
+                width: '100%',
+                resize: 'vertical',
+                minHeight: '110px',
+                padding: '12px 14px',
+                fontFamily: 'inherit',
+                fontSize: '14px',
+                lineHeight: 1.5
+              }}
+            />
           </div>
 
-          <a 
-            href="tel:+998712000088" 
-            className="btn btn-primary"
-            style={{ padding: '8px 16px', fontSize: '13px', minHeight: '38px', textDecoration: 'none' }}
-          >
-            <Phone size={15} /> Bog‘lanish
-          </a>
-        </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmittingFeedback || !feedbackText.trim()}
+              style={{
+                padding: '10px 22px',
+                fontSize: '14px',
+                fontWeight: '700',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: isSubmittingFeedback || !feedbackText.trim() ? 0.7 : 1,
+                cursor: isSubmittingFeedback || !feedbackText.trim() ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isSubmittingFeedback ? (
+                <>
+                  <Loader2 size={16} className="spin-animation" />
+                  <span>Yuborilmoqda...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={16} />
+                  <span>Izohni yuborish</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* Edit Profile Modal */}

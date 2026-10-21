@@ -62,18 +62,6 @@ export const INITIAL_WASTE_CATEGORIES: WasteCategory[] = [
     color: '#14B8A6' // teal
   },
   {
-    id: 'battery',
-    name: 'Batareya',
-    icon: '🔋',
-    description: 'Akkumulyatorlar, barmoq batareyalar (xavfsiz utilizatsiya va qayta ishlash)',
-    ratePerKg: 15000, // 15,000 so'm / kg
-    ecoPointsPerKg: 30,
-    pickupAvailable: true,
-    acceptedSubtypes: ['Avto akkumulyatorlari', 'AA/AAA batareyalar', 'Lityum-ion batareyalar'],
-    unit: 'kg',
-    color: '#EF4444' // red
-  },
-  {
     id: 'electronics',
     name: 'Elektron chiqindi',
     icon: '📱',

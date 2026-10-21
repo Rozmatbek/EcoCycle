@@ -103,7 +103,7 @@ export const CreateOrderModal: React.FC<Props> = ({
           <div>
             <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
               {step === 1 && 'Chiqindi turini tanlang'}
-              {step === 2 && 'Miqdor va taxminiy qiymat'}
+              {step === 2 && 'Miqdor va qiymat'}
               {step === 3 && 'Topshirish usuli va manzil'}
               {step === 4 && 'Buyurtmani tekshiring'}
             </h2>
@@ -143,10 +143,7 @@ export const CreateOrderModal: React.FC<Props> = ({
                       </div>
                     )}
                     <div style={{ fontSize: '32px', marginBottom: '6px' }}>{cat.icon}</div>
-                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)', marginBottom: '4px' }}>{cat.name}</div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)' }}>
-                      {cat.ratePerKg.toLocaleString('uz-UZ')} so‘m/{cat.unit}
-                    </div>
+                    <div style={{ fontWeight: '700', fontSize: '14px', color: 'var(--text-main)' }}>{cat.name}</div>
                   </div>
                 );
               })}
@@ -172,9 +169,6 @@ export const CreateOrderModal: React.FC<Props> = ({
               <span style={{ fontSize: '30px' }}>{selectedCat.icon}</span>
               <div>
                 <div style={{ fontWeight: '800', fontSize: '16px' }}>{selectedCat.name}</div>
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  1 kg = <strong>{selectedCat.ratePerKg.toLocaleString('uz-UZ')} so‘m</strong>
-                </div>
               </div>
             </div>
 
@@ -440,10 +434,6 @@ export const CreateOrderModal: React.FC<Props> = ({
                   {estimatedValue.toLocaleString('uz-UZ')} so‘m
                 </span>
               </div>
-            </div>
-
-            <div style={{ background: 'var(--primary-light)', padding: '12px 14px', borderRadius: '12px', color: 'var(--primary-dark)', fontSize: '12px', marginBottom: '24px', fontWeight: '600' }}>
-              ⭐️ Buyurtma yakunlangach hisobingizga +{estimatedPoints} EcoPoints qo‘shiladi.
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>

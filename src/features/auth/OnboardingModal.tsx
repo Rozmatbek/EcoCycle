@@ -3,9 +3,11 @@ import { UZBEKISTAN_REGIONS } from '../../data/uzbekistanLocations';
 import { UzbekistanLockBadge } from '../../components/common/UzbekistanLockBadge';
 import { useApp } from '../../context/AppContext';
 import { User, UserRole } from '../../types';
-import { Recycle, ArrowRight, CheckCircle2, Phone, Sparkles, User as UserIcon, Truck, Factory } from 'lucide-react';
+import { Recycle, ArrowRight, CheckCircle2, Phone, Sparkles, User as UserIcon, Truck, Factory, Bell, MapPin, Navigation } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { formatUzbekPhone, getPhoneDigitsCount } from '../../utils/phoneFormatter';
+import { INITIAL_RECYCLING_POINTS, getAccurateDropoffPoints } from '../../data/recyclingPoints';
+import { saveUserToSupabase, trackVisitor } from '../../services/supabase';
 
 interface Props {
   isOpen: boolean;
@@ -13,7 +15,7 @@ interface Props {
 }
 
 export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
-  const { login, setActiveRole } = useApp();
+  const { login, setActiveRole, setNotificationsEnabled } = useApp();
   const [slide, setSlide] = useState<number>(0); // 0, 1, 2 for onboarding slides; 3 for registration form; 4 for OTP
   
   // Registration Form State
@@ -25,6 +27,7 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [selectedDistrict, setSelectedDistrict] = useState('');
   const [mahalla, setMahalla] = useState('');
   const [street, setStreet] = useState('');
+  const [wantNotifications, setWantNotifications] = useState<boolean>(false);
   const [otpCode, setOtpCode] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -85,11 +88,29 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
       mahalla,
       street,
       role: selectedRole,
+      notificationsEnabled: wantNotifications,
       createdAt: new Date().toISOString()
     };
 
     login(newUser);
     setActiveRole(selectedRole);
+    setNotificationsEnabled(wantNotifications);
+
+    // Save user to Supabase and track visitor
+    saveUserToSupabase({
+      id: newUser.id,
+      first_name: newUser.firstName,
+      last_name: newUser.lastName,
+      phone: newUser.phone,
+      region: newUser.region,
+      district: newUser.district,
+      mahalla: newUser.mahalla,
+      street: newUser.street,
+      role: newUser.role,
+      created_at: newUser.createdAt
+    });
+    trackVisitor(newUser);
+
     onClose();
   };
 
@@ -385,6 +406,75 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
+              {/* Tanlangan viloyat va shahardagi topshirish punktlari preview */}
+              {currentRegion && (
+                <div style={{
+                  background: 'var(--bg-card-subtle)',
+                  border: '1.5px solid var(--border-color)',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  marginBottom: '14px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>
+                      <MapPin size={15} color="var(--primary)" />
+                      <span>{currentRegion.name} {selectedDistrict ? `(${selectedDistrict})` : ''} topshirish punktlari:</span>
+                    </div>
+                  </div>
+
+                  {(() => {
+                    const displayPoints = getAccurateDropoffPoints(INITIAL_RECYCLING_POINTS, currentRegion.name, selectedDistrict);
+
+                    if (displayPoints.length === 0) {
+                      return (
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', padding: '4px 0' }}>
+                          Ushbu hududda yangi mobil collector xizmati ishga tushirilgan.
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                        {displayPoints.map(p => (
+                          <div 
+                            key={p.id}
+                            style={{
+                              background: 'var(--bg-card)',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '10px',
+                              padding: '8px 10px'
+                            }}
+                          >
+                            <div style={{ fontWeight: '800', fontSize: '12px', color: 'var(--text-main)', marginBottom: '2px' }}>
+                              🏢 {p.name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                              📍 <strong>Aniq manzili:</strong> {p.address}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '11px' }}>
+                              <a 
+                                href={`tel:${p.phone.replace(/\s+/g, '')}`}
+                                style={{ color: 'var(--primary)', fontWeight: '700', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Phone size={11} /> {p.phone}
+                              </a>
+                              <a 
+                                href={`https://yandex.uz/maps/?rtext=~${p.lat},${p.lng}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ color: '#3B82F6', fontWeight: '700', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Navigation size={11} /> Lokatsiyasi
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div className="form-group">
                 <label className="form-label">Mahalla / Ko‘cha / Uy</label>
                 <input 
@@ -396,7 +486,37 @@ export const OnboardingModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '8px' }}>
+              {/* Bildirishnomalar sozlamasi - foydalanuvchining o'z tanloviga bog'liq */}
+              <div 
+                onClick={() => setWantNotifications(!wantNotifications)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 12px',
+                  background: 'var(--bg-card-subtle)',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  marginBottom: '16px',
+                  border: '1px solid var(--border-color)'
+                }}
+              >
+                <input 
+                  type="checkbox" 
+                  id="notifPref"
+                  checked={wantNotifications}
+                  onChange={(e) => setWantNotifications(e.target.checked)}
+                  style={{ width: '18px', height: '18px', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                />
+                <div style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '600', cursor: 'pointer' }}>
+                  Bildirishnomalarni yoqish
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '400' }}>
+                    Buyurtma holati va to‘lovlar bo‘yicha xabarlarni olish
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: '4px' }}>
                 Davom etish <ArrowRight size={18} />
               </button>
             </form>

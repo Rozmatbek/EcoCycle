@@ -26,7 +26,7 @@ export const BottomNav: React.FC<Props> = ({ currentTab, onNavigate, onOpenCreat
         onClick={() => onNavigate('map')}
       >
         <MapPin size={20} />
-        <span>Xarita</span>
+        <span>Punktlar</span>
       </button>
 
       {/* 3. Chiqindi topshirish (Prominent Center Button) */}

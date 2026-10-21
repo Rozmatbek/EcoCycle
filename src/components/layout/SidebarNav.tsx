@@ -8,16 +8,20 @@ import {
   User, 
   Wallet, 
   Truck, 
-  Factory 
+  Factory,
+  Globe,
+  Sparkles
 } from 'lucide-react';
 
 interface Props {
   currentTab: string;
   onNavigate: (tab: string) => void;
   onOpenCreateOrder: () => void;
+  onOpenLanding?: () => void;
+  onOpenRegister?: () => void;
 }
 
-export const SidebarNav: React.FC<Props> = ({ currentTab, onNavigate, onOpenCreateOrder }) => {
+export const SidebarNav: React.FC<Props> = ({ currentTab, onNavigate, onOpenCreateOrder, onOpenLanding, onOpenRegister }) => {
   const { activeRole } = useApp();
 
   return (
@@ -108,6 +112,28 @@ export const SidebarNav: React.FC<Props> = ({ currentTab, onNavigate, onOpenCrea
           <User size={19} />
           <span>Profil</span>
         </button>
+
+        {onOpenLanding && (
+          <button 
+            className="sidebar-item"
+            onClick={onOpenLanding}
+            style={{ marginTop: '14px', borderTop: '1px solid var(--border-light)', paddingTop: '12px', color: 'var(--text-muted)' }}
+          >
+            <Globe size={18} />
+            <span>Landing Sahifa</span>
+          </button>
+        )}
+
+        {onOpenRegister && (
+          <button 
+            className="sidebar-item"
+            onClick={onOpenRegister}
+            style={{ color: 'var(--primary)', fontWeight: '700' }}
+          >
+            <Sparkles size={18} />
+            <span>Ro‘yxatdan o‘tish</span>
+          </button>
+        )}
       </div>
 
     </aside>

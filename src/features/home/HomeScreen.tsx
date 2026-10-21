@@ -19,24 +19,34 @@ export const HomeScreen: React.FC<Props> = ({
   onOpenCreateOrder,
   onOpenOrderDetails 
 }) => {
-  const { user, balance, orders } = useApp();
+  const { user, balance, orders, wasteCategories } = useApp();
 
-  // Calculate dynamic statistics totals from completed orders + demo base
-  const completedOrders = orders.filter(o => o.status === 'completed');
-  
-  const plasticKg = 21 + completedOrders
-    .filter(o => o.category.id === 'plastic')
-    .reduce((sum, o) => sum + (o.weightKg || 0), 0);
+  // Calculate dynamic statistics for all submitted waste categories
+  const submittedOrders = orders.filter(o => o.status !== 'cancelled');
 
-  const paperKg = 12 + completedOrders
-    .filter(o => o.category.id === 'paper' || o.category.id === 'cardboard')
-    .reduce((sum, o) => sum + (o.weightKg || 0), 0);
+  const categoryBaseKg: Record<string, number> = {
+    plastic: 21,
+    cardboard: 15,
+    paper: 12,
+    metal: 8,
+    glass: 10,
+    electronics: 4,
+    textile: 6
+  };
 
-  const metalKg = 5 + completedOrders
-    .filter(o => o.category.id === 'metal')
-    .reduce((sum, o) => sum + (o.weightKg || 0), 0);
+  const wasteStats = wasteCategories.map(cat => {
+    const fromOrders = submittedOrders
+      .filter(o => o.category?.id === cat.id || o.category?.name?.toLowerCase() === cat.name?.toLowerCase())
+      .reduce((sum, o) => sum + (Number(o.weightKg) || 0), 0);
 
-  const totalKg = plasticKg + paperKg + metalKg;
+    const base = categoryBaseKg[cat.id] || 0;
+    return {
+      ...cat,
+      totalKg: base + fromOrders
+    };
+  });
+
+  const totalKg = wasteStats.reduce((sum, item) => sum + item.totalKg, 0);
 
   // Active ongoing orders
   const activeOrders = orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
@@ -210,29 +220,36 @@ export const HomeScreen: React.FC<Props> = ({
                 {totalKg} kg
               </div>
               <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                jami chiqindi qayta ishlashga muvaffaqiyatli topshirilgan
+                jami yuborilgan chiqindilar miqdori
               </div>
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '12px', textAlign: 'center' }}>
-            <div style={{ background: 'var(--bg-card-subtle)', padding: '16px 10px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '26px', marginBottom: '6px' }}>📦</div>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{plasticKg} kg</div>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginTop: '2px' }}>Plastik</div>
-            </div>
-
-            <div style={{ background: 'var(--bg-card-subtle)', padding: '16px 10px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '26px', marginBottom: '6px' }}>📄</div>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{paperKg} kg</div>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginTop: '2px' }}>Karton & Qog‘oz</div>
-            </div>
-
-            <div style={{ background: 'var(--bg-card-subtle)', padding: '16px 10px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-              <div style={{ fontSize: '26px', marginBottom: '6px' }}>🔩</div>
-              <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{metalKg} kg</div>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginTop: '2px' }}>Metall</div>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '10px', textAlign: 'center' }}>
+            {wasteStats.map(cat => (
+              <div 
+                key={cat.id}
+                style={{ 
+                  background: 'var(--bg-card-subtle)', 
+                  padding: '14px 8px', 
+                  borderRadius: '16px', 
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+              >
+                <div style={{ fontSize: '28px', marginBottom: '4px' }}>{cat.icon}</div>
+                <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>
+                  {cat.totalKg} kg
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-muted)', marginTop: '2px' }}>
+                  {cat.name}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

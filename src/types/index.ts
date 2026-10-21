@@ -26,6 +26,7 @@ export interface User {
   avatarUrl?: string;
   createdAt: string;
   role: UserRole;
+  notificationsEnabled?: boolean;
 }
 
 export interface WasteCategory {
