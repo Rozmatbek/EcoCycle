@@ -12,8 +12,6 @@ import { CreateOrderModal } from './features/waste/CreateOrderModal';
 import { OrderDetailsModal } from './features/orders/OrderDetailsModal';
 import { NotificationModal } from './features/notifications/NotificationModal';
 import { OnboardingModal } from './features/auth/OnboardingModal';
-import { LandingPage } from './features/landing/LandingPage';
-import { RegisterPage } from './features/auth/RegisterPage';
 import { AppHeader } from './components/layout/AppHeader';
 import { SidebarNav } from './components/layout/SidebarNav';
 import { BottomNav } from './components/layout/BottomNav';
@@ -30,16 +28,6 @@ export const App: React.FC = () => {
     trackVisitor(user);
   }, [user]);
 
-  const [viewMode, setViewMode] = useState<'app' | 'landing' | 'register'>(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const page = params.get('page');
-      if (page === 'landing') return 'landing';
-      if (page === 'register') return 'register';
-    }
-    return 'app';
-  });
-
   const [currentTab, setCurrentTab] = useState<string>('home');
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState<boolean>(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -51,29 +39,6 @@ export const App: React.FC = () => {
   const handleOpenOrderDetails = (orderId: string) => {
     setSelectedOrderId(orderId);
   };
-
-  // Dedicated Landing Page View
-  if (viewMode === 'landing') {
-    return (
-      <LandingPage 
-        onNavigateToRegister={() => setViewMode('register')}
-        onNavigateToApp={(tab) => {
-          if (tab) setCurrentTab(tab);
-          setViewMode('app');
-        }}
-      />
-    );
-  }
-
-  // Dedicated Register Page View
-  if (viewMode === 'register') {
-    return (
-      <RegisterPage 
-        onNavigateToApp={() => setViewMode('app')}
-        onNavigateToLanding={() => setViewMode('landing')}
-      />
-    );
-  }
 
   return (
     <div className="app-viewport-wrapper">
@@ -87,8 +52,6 @@ export const App: React.FC = () => {
             currentTab={currentTab} 
             onNavigate={(tab) => setCurrentTab(tab)} 
             onOpenCreateOrder={() => setIsCreateOrderOpen(true)} 
-            onOpenLanding={() => setViewMode('landing')}
-            onOpenRegister={() => setViewMode('register')}
           />
 
           {/* App Core Container */}
@@ -98,8 +61,6 @@ export const App: React.FC = () => {
             <AppHeader 
               onOpenNotifications={() => setIsNotifOpen(true)}
               onNavigate={(tab) => setCurrentTab(tab)}
-              onOpenLanding={() => setViewMode('landing')}
-              onOpenRegister={() => setViewMode('register')}
             />
 
             {/* Dynamic Screen View according to Active Role & Tab */}
